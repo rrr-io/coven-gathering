@@ -254,7 +254,6 @@ Applied Flyway migrations are immutable. For future changes, add `V2__...sql`, `
 
 ## Sources and dependencies
 
-- Deployment structure: https://github.com/rrr-io/my-race-engineer — commit listed above.
 - Spring Boot 3.5: https://docs.spring.io/spring-boot/3.5/system-requirements.html
 - Vercel external rewrites: https://vercel.com/docs/routing/rewrites
 - Caddy reverse proxy: https://caddyserver.com/docs/caddyfile/directives/reverse_proxy
@@ -264,24 +263,5 @@ Applied Flyway migrations are immutable. For future changes, add `V2__...sql`, `
 
 This project is fan-made and is not affiliated with or endorsed by MAMA, CJ ENM, HYBE, ENHYPEN, or Twilight. Rankings represent gathering participation, not official voting results.
 
-## Gathering certificate upgrade
-
-See `UPGRADE-GATHERING.md` before deploying this patch to an existing installation.
-
-Recognition requires the English Mnet Plus certificate heading, issuer statement,
-participation date and certificate number, following the supplied example.
-This is a **format check**, not an authenticity check against Mnet. It cannot
-reliably distinguish a downloaded certificate from a pixel-identical screenshot,
-prove a vote was cast for ENHYPEN, or authenticate the event/date/owner. A normal
-voting-screen screenshot without the certificate fields is rejected. Dates are
-parsed for readability, not used as an official eligibility rule. The submitted
-example is an M COUNTDOWN certificate; MAMA-specific formats require a separate
-sample before adding recognition rules. OCR can misread identifiers or reject
-valid images; the participant can retry with the original readable file.
-
-The server processes one OCR request at a time with a 20-second timeout. Busy
-requests receive HTTP 429 and can retry. OCR runs outside the database lock;
-eligibility, duplicate protection and the original live window are rechecked
-atomically before accepting the check-in. No external AI service is used.
 
 Tesseract CLI reference: https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html

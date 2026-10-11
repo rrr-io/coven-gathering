@@ -840,7 +840,7 @@ export default function Page() {
             {page === "gathering" && (
               <>
                 {sectionHeader(
-                  "LIVE CLAN GATHERING · " + (data?.day || "KST"),
+                  "LIVE CLAN CENSUS · " + (data?.day || "KST"),
                   "Every check-in counts.",
                   "Accepted certificates ÷ eligible members × 100. These are fan-made participation statistics, never official voting results.",
                 )}
