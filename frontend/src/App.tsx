@@ -28,7 +28,7 @@ import { leader } from "./lib/engine";
 const nav = [
   ["home", "Home"],
   ["clans", "Clans"],
-  ["gathering", "Gathering"],
+  ["gathering", "Muster"],
   ["worldwide", "Worldwide"],
   ["history", "History"],
   ["guide", "MAMA guide"],
