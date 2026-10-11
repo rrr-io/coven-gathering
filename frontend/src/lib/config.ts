@@ -120,7 +120,7 @@ export const questions = [
 ];
 export const schedules = [
   { id: 1, name: "Moonrise", start: "09:00", end: "11:00" },
-  { id: 2, name: "Noon gathering", start: "12:00", end: "14:00" },
+  { id: 2, name: "Nocturne", start: "00:00", end: "02:00" },
   { id: 3, name: "Twilight", start: "18:00", end: "20:00" },
   { id: 4, name: "The final hour", start: "22:00", end: "23:00" },
 ];
@@ -176,7 +176,7 @@ export const rules = [
   "Complete the ENGENE × ENHYPEN sorting quiz.",
   "Accept your assigned clan.",
   "Your clan remains locked across gathering days.",
-  "One valid check-in per participant, per schedule.",
+  "One valid check-in per clan member, per schedule.",
   "Certificates count automatically after a format check.",
   "Reused certificate numbers do not count.",
   "Rankings use participation percentage.",

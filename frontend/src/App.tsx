@@ -842,7 +842,7 @@ export default function Page() {
                 {sectionHeader(
                   "LIVE CLAN CENSUS · " + (data?.day || "KST"),
                   "Every check-in counts.",
-                  "Accepted certificates ÷ eligible members × 100. These are fan-made participation statistics, never official voting results.",
+                  "Fan-made participation statistics. They may differ from official MAMA voting results.",
                 )}
                 <div className="window-tabs">
                   {data?.schedules.map((s: any) => (
@@ -886,7 +886,7 @@ export default function Page() {
                 {sectionHeader(
                   "ENGENEs AROUND THE WORLD",
                   "The fandom, without borders.",
-                  "Only confirmed participants appear. Countries and voting regions use aggregate counts.",
+                  "Only confirmed clan members appear. Countries and voting regions use aggregate counts.",
                 )}
                 {world()}
               </>
