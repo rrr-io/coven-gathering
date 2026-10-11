@@ -1,8 +1,8 @@
 # The Coven Gathering — React + Spring Boot
 
-A standalone version of The Coven Gathering website: **React + Vite + TypeScript**, **Java 21 + Spring Boot 3.5.16**, **PostgreSQL 16**, **Flyway** migrations, disk-based uploads, and a KST scheduler. No dependency on ChatGPT, Cloudflare D1/R2, or the preview site.
+A standalone version of The Coven Gathering website: **React + Vite + TypeScript**, **Java 21 + Spring Boot 3.5.16**, **PostgreSQL 16**, **Flyway** migrations, in-memory certificate recognition, and a KST scheduler. No dependency on ChatGPT, Cloudflare D1/R2, or the preview site.
 
-The original layout and features are preserved: home page, four clans, selection of 249 ISO countries/territories, eight questions, tie-breakers, confirmation, participant dashboard, proof review, leaderboards, regions, history, and admin configuration.
+The original layout and features are preserved: home page, four clans, selection of 249 ISO countries/territories, eight questions, tie-breakers, confirmation, participant dashboard, automatic certificate check-ins, leaderboards, regions, history, and admin configuration.
 
 ## Project structure
 
@@ -13,14 +13,14 @@ backend/                  Spring Boot, JDBC, REST, Flyway, integration tests
     config/               Spring configuration and clock
     controller/           API endpoints and error handling
     security/             participant cookies, admin Basic auth, origin validation
-    service/              quiz, registration, race engine, proofs, configuration
+    service/              quiz, registration, gathering engine, proofs, configuration
     repository/           parameterized SQL access
     scheduler/            daily reset and KST windows
   src/main/resources/
     config.json           initial configuration, editable by the admin
     countries.json        complete country dataset
     db/migration/         versioned database schema
-  src/test/               API, database, cookie, security, and race rule tests
+  src/test/               API, database, cookie, security, and gathering rule tests
 deploy/                   production Compose, Caddy, and backup script
 .github/workflows/        tests and SSH deployment to Oracle
 ```
@@ -36,7 +36,7 @@ The deployment follows:
 
 ## Run locally
 
-Requirements: **Java 21**, **Maven 3.6.3+**, **Node 22.12+**, and **Docker Compose v2**.
+Requirements: **Java 21**, **Maven 3.6.3+**, **Node 22.12+**, **Docker Compose v2**, and **Tesseract OCR with English language data**. On Ubuntu: `sudo apt-get install tesseract-ocr tesseract-ocr-eng`. On macOS: `brew install tesseract`.
 
 From the project root:
 
@@ -87,7 +87,7 @@ sudo chown "$USER:$USER" /opt/coven-gathering /srv/coven-gathering
 docker network inspect web >/dev/null 2>&1 || docker network create web
 ```
 
-If deployment uses a different user from the one running these commands, assign the directories to that user instead. Do not change permissions on the Race Engineer directories.
+If deployment uses a different user from the one running these commands, assign the directories to that user instead. Do not change permissions on the existing application directories.
 
 ### 3. DNS and Caddy
 
@@ -139,7 +139,7 @@ git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git
 git push -u origin main
 ```
 
-The workflow runs tests, builds `frontend/dist` and `backend/target/app.jar`, copies them to the server, and waits for PostgreSQL and the backend to become healthy. It then updates the frontend. The previous JAR is retained as `app.jar.previous`; database records and proofs are not deleted.
+The workflow runs tests, builds `frontend/dist` and `backend/target/app.jar`, copies them to the server, and waits for PostgreSQL and the backend to become healthy. It then updates the frontend. The previous JAR is retained as `app.jar.previous`; participants and archived statistics are preserved. The upgrade removes legacy stored proof images after the new backend is healthy.
 
 Check the server:
 
@@ -158,7 +158,7 @@ After configuring `.env`, the directories, and Caddy:
 ```bash
 (cd frontend && npm ci && npm test && npm run build)
 (cd backend && mvn verify)
-scp backend/target/app.jar deploy/docker-compose.yml YOUR-USER@YOUR-SERVER:/opt/coven-gathering/
+scp backend/target/app.jar deploy/docker-compose.yml deploy/Dockerfile YOUR-USER@YOUR-SERVER:/opt/coven-gathering/
 rsync -az --delete frontend/dist/ YOUR-USER@YOUR-SERVER:/srv/coven-gathering/
 ```
 
@@ -166,12 +166,12 @@ Create `/opt/coven-gathering/.env` on the server with `DB_PASSWORD`, `ADMIN_PASS
 
 ```bash
 cd /opt/coven-gathering
-docker compose up -d --wait --wait-timeout 180
+docker compose up -d --build --wait --wait-timeout 180
 ```
 
 ## Alternative: Vercel frontend, Oracle backend
 
-This setup keeps **Spring Boot, PostgreSQL, the scheduler, and proofs on Oracle** and deploys only React to Vercel. It does not require Vercel to run a Java JAR or store uploads in a function's temporary filesystem.
+This setup keeps **Spring Boot, PostgreSQL, the scheduler, and check-in counters on Oracle** and deploys only React to Vercel. It does not require Vercel to run a Java JAR or store uploads in a function's temporary filesystem.
 
 1. Prepare the Oracle backend as described above.
 2. Use `deploy/Caddyfile.api.example` for a dedicated HTTPS subdomain, such as `api-coven.rrriooo.com`.
@@ -190,11 +190,12 @@ Once deployed, verify registration, cookies, admin sign-in, and uploads through 
 - Public visitors see aggregate statistics only.
 - Participants receive a random `HttpOnly`, `SameSite=Lax` cookie, marked `Secure` in production and valid for one year. Only its hash is stored in the database.
 - Admin authentication uses HTTP Basic over HTTPS. Credentials stay in page memory and are lost on reload. Every operation is authorized server-side.
-- Proof uploads are private, limited to 5 MB, and support JPG/PNG/WebP. Only the owner or admin can access them. Reviewers open external proof URLs manually; the server does not download them.
+- Certificate uploads accept PNG/JPG up to 5 MB and 16 megapixels. Multipart uploads stay in memory; Tesseract receives bytes on stdin. The image, OCR text, readable certificate number and URL are not stored or logged. There is no image download endpoint.
+- Minimal check-in receipts retain participant/window associations, timestamps and a SHA-256 certificate-number fingerprint to enforce one check-in per window and prevent certificate reuse. Aggregate counters stay on the server. The UI and statistics API expose certificate participation percentages and membership shares, including history and coordination, without participant or proof counts.
 
 This version **does not introduce ENGENE accounts**. The cookie identifies a browser, not a unique person: another browser or clearing cookies creates a new identity, and registration cannot be recovered. This supports a participation flow without sign-in; the clan remains locked for that identity. Data from the ChatGPT preview site is not imported automatically.
 
-## Race integrity
+## Gathering integrity
 
 - Selecting a country does not create a participant.
 - Completing the quiz creates only a private quiz result.
@@ -202,17 +203,17 @@ This version **does not introduce ENGENE accounts**. The cookie identifies a bro
 - The server calculates the clan. Tie-breakers only select among clans that are actually tied.
 - Denominators use registrations timestamped **before the window starts**. Participants who join during a window become eligible for the next one.
 - A SQL constraint prevents two proofs from the same participant within one window.
-- Hashes detect reuse of the same file or URL. Verified hashes also have a unique database constraint.
-- Only `VERIFIED` proofs increase statistics. No leaders are fabricated.
+- A normalized certificate-number fingerprint detects reuse even if the file is recompressed. A database lock and unique constraint protect concurrent submissions.
+- Recognized certificates immediately receive the internal `VERIFIED` status, displayed as **ACCEPTED**. No administrator approval is needed. Failed scans and duplicates do not consume the slot, so participants can retry.
 - `@Scheduled`, using `Asia/Seoul`, closes the day at midnight. A tick every 15 seconds and reconciliation on each request catch up after backend downtime.
-- Historical snapshots preserve final results and denominators. Proofs still pending at day-end do not count retroactively.
-- A PostgreSQL transaction lock serializes race changes, including simultaneous requests.
+- Historical snapshots preserve final results and denominators. Legacy pending submissions are rejected by the upgrade, never retroactively accepted.
+- A PostgreSQL transaction lock serializes gathering changes, including simultaneous requests.
 
 The scheduler treats midnight as the logical boundary. If the JVM or server is offline, execution cannot occur at that exact instant; after restart, results are reconstructed using the original timestamps.
 
 ## Admin configuration
 
-The `/#admin` page includes proof review, coordination, and these configuration sections: General, Clans, Quiz, Quiz questions, Quiz scoring, Schedules, Countries, Voting regions, MAMA guide, Website content, Banners, and Admin settings.
+The `/#admin` page includes coordination, and these configuration sections: General, Clans, Quiz, Quiz questions, Quiz scoring, Schedules, Countries, Voting regions, MAMA guide, Website content, Banners, and Admin settings.
 
 The editor uses **JSON**, validated by the backend. Initial configuration comes from `backend/src/main/resources/config.json` until a configuration is saved in the database. Editing the file after the first admin save does not overwrite the database configuration.
 
@@ -235,21 +236,21 @@ Example override in `Countries`:
 (cd backend && mvn verify)
 ```
 
-Frontend: seven tests covering sorting, tie-breakers, KST boundaries, percentages, and request handling. Backend: Spring/MockMvc tests using the Flyway schema and H2 in PostgreSQL mode, plus pure rule tests. The API test covers the six original acceptance scenarios, repeated confirmation, closed windows, late registration, duplicate proofs, private image access, admin authorization, rejection of untrusted origins, configuration changes, and immutable history.
+Frontend: seven tests covering sorting, tie-breakers, KST boundaries, percentages, and request handling. Backend: Spring/MockMvc tests using the Flyway schema and H2 in PostgreSQL mode, plus pure rule tests. The API test covers the six original acceptance scenarios, repeated confirmation, closed windows, late registration, duplicate proofs, removed image access, automatic certificate acceptance, certificate OCR, admin authorization, rejection of untrusted origins, configuration changes, and immutable history.
 
 Local tests do not use production databases. The GitHub Actions backend jobs are also configured to run against a PostgreSQL 16 service. Deployment to your Oracle server and browser-based visual end-to-end testing have not been performed.
 
 ## Persistence and backups
 
-Volumes: `coven-gathering_coven-db-data` and `coven-gathering_coven-proofs`. Keep the Compose project name `coven-gathering`. `docker compose down` preserves volumes; **do not use `down -v` on data you need to keep**.
+Volume: `coven-gathering_coven-db-data`. New certificates have no persistent file volume. Keep the Compose project name `coven-gathering`. `docker compose down` preserves volumes; **do not use `down -v` on data you need to keep**.
 
-`deploy/backup.sh` briefly stops the backend, saves a PostgreSQL dump and a proof archive, then restarts the backend. Run it on the server with a private backup directory:
+`deploy/backup.sh` briefly stops the backend, saves a PostgreSQL dump, then restarts the backend. Run it on the server with a private backup directory:
 
 ```bash
 bash /path/to/backup.sh /path/to/coven-backups
 ```
 
-Do not restore only one of the two files: database records and images must be retained together. Applied Flyway migrations are immutable. For future changes, add `V2__...sql`, `V3__...sql`, and so on. Rolling back the JAR alone does not undo database migrations.
+Applied Flyway migrations are immutable. For future changes, add `V2__...sql`, `V3__...sql`, and so on. Rolling back the JAR alone does not undo database migrations.
 
 ## Sources and dependencies
 
@@ -261,4 +262,26 @@ Do not restore only one of the two files: database records and images must be re
 - Timezones: IANA via pytz; offsets are calculated dynamically, including daylight saving changes.
 - Fonts: Cormorant Garamond and Manrope via Google Fonts, with local fallbacks.
 
-This project is fan-made and is not affiliated with or endorsed by MAMA, CJ ENM, HYBE, ENHYPEN, or Twilight. Rankings represent race participation, not official voting results.
+This project is fan-made and is not affiliated with or endorsed by MAMA, CJ ENM, HYBE, ENHYPEN, or Twilight. Rankings represent gathering participation, not official voting results.
+
+## Gathering certificate upgrade
+
+See `UPGRADE-GATHERING.md` before deploying this patch to an existing installation.
+
+Recognition requires the English Mnet Plus certificate heading, issuer statement,
+participation date and certificate number, following the supplied example.
+This is a **format check**, not an authenticity check against Mnet. It cannot
+reliably distinguish a downloaded certificate from a pixel-identical screenshot,
+prove a vote was cast for ENHYPEN, or authenticate the event/date/owner. A normal
+voting-screen screenshot without the certificate fields is rejected. Dates are
+parsed for readability, not used as an official eligibility rule. The submitted
+example is an M COUNTDOWN certificate; MAMA-specific formats require a separate
+sample before adding recognition rules. OCR can misread identifiers or reject
+valid images; the participant can retry with the original readable file.
+
+The server processes one OCR request at a time with a 20-second timeout. Busy
+requests receive HTTP 429 and can retry. OCR runs outside the database lock;
+eligibility, duplicate protection and the original live window are rechecked
+atomically before accepting the check-in. No external AI service is used.
+
+Tesseract CLI reference: https://tesseract-ocr.github.io/tessdoc/Command-Line-Usage.html

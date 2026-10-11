@@ -34,6 +34,11 @@ public class ApiErrors {
                 "error", "This action conflicts with an existing record. Refresh and try again."));
   }
 
+  @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+  public ResponseEntity<?> missing() {
+    return ResponseEntity.status(404).body(Map.of("error", "Not found."));
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<?> unexpected(Exception e) {
     org.slf4j.LoggerFactory.getLogger(ApiErrors.class).error("API request failed", e);

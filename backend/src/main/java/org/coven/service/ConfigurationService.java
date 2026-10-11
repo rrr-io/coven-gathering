@@ -86,7 +86,7 @@ public class ConfigurationService {
     if (c.path("clans").size() != 4) throw new IllegalArgumentException("Keep four clans.");
     for (int i = 0; i < 4; i++) {
       var clan = c.path("clans").get(i);
-      if (!clan.path("id").asText().equals(RaceRules.CLANS.get(i))
+      if (!clan.path("id").asText().equals(GatheringRules.CLANS.get(i))
           || clan.path("name").asText().isBlank()
           || !clan.path("color").asText().matches("#[0-9a-fA-F]{6}"))
         throw new IllegalArgumentException("Keep stable clan IDs, names and valid hex colors.");

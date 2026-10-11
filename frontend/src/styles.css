@@ -695,7 +695,7 @@ textarea {
   font-size: 12px;
   max-width: 780px;
 }
-.race-panel {
+.gathering-panel {
   border: 1px solid #343b3b;
   background: #111619;
 }
@@ -705,30 +705,30 @@ textarea {
   justify-content: space-between;
   gap: 20px;
 }
-.race-panel > .row {
+.gathering-panel > .row {
   padding: 24px 26px 20px;
   border-bottom: 1px solid #2a3334;
   background: linear-gradient(90deg, #182023, #13191b);
 }
-.race-panel h3 {
+.gathering-panel h3 {
   font-size: 31px;
   margin-top: 8px;
 }
-.race-panel p {
+.gathering-panel p {
   font-size: 11px;
 }
 .panel-moon {
   color: #949c8e;
   margin-right: 8px;
 }
-.race-row {
+.gathering-row {
   display: flex;
   align-items: center;
   gap: 18px;
   padding: 15px 26px;
   border-bottom: 1px solid #272e2e;
 }
-.race-row:last-child {
+.gathering-row:last-child {
   border: 0;
 }
 .rank {
@@ -737,20 +737,20 @@ textarea {
   color: #66726c;
   width: 20px;
 }
-.race-name {
+.gathering-name {
   min-width: 176px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.race-name strong {
+.gathering-name strong {
   font-family: var(--serif);
   font-size: 20px;
   letter-spacing: 1px;
   color: var(--clan);
   font-weight: 500;
 }
-.race-name span {
+.gathering-name span {
   font-size: 9px;
   color: #89938d;
 }
@@ -1910,7 +1910,7 @@ dialog::backdrop {
   .region-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .race-name {
+  .gathering-name {
     min-width: 150px;
   }
   .proof-panel {
@@ -2148,17 +2148,17 @@ dialog::backdrop {
     line-height: 1.6;
     margin-top: 11px;
   }
-  .race-panel > .row {
+  .gathering-panel > .row {
     padding: 20px 17px;
   }
-  .race-panel > .row .eyebrow {
+  .gathering-panel > .row .eyebrow {
     font-size: 7px;
     letter-spacing: 1.2px;
   }
-  .race-panel h3 {
+  .gathering-panel h3 {
     font-size: 27px;
   }
-  .race-panel p {
+  .gathering-panel p {
     font-size: 10px;
     max-width: 260px;
   }
@@ -2166,7 +2166,7 @@ dialog::backdrop {
     width: 26px;
     margin: 0;
   }
-  .race-row {
+  .gathering-row {
     padding: 14px;
     gap: 10px;
   }
@@ -2174,23 +2174,23 @@ dialog::backdrop {
     width: 13px;
     font-size: 14px;
   }
-  .race-row .crest.small {
+  .gathering-row .crest.small {
     width: 28px;
     height: 34px;
   }
-  .race-row .crest.small > svg:last-child {
+  .gathering-row .crest.small > svg:last-child {
     width: 15px;
     height: 15px;
   }
-  .race-name {
+  .gathering-name {
     min-width: 107px;
     gap: 5px;
   }
-  .race-name strong {
+  .gathering-name strong {
     font-size: 17px;
     letter-spacing: 0.7px;
   }
-  .race-name span {
+  .gathering-name span {
     font-size: 7px;
   }
   .bar {

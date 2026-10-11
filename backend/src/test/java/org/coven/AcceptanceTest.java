@@ -31,6 +31,9 @@ class AcceptanceTest {
   @Autowired MutableClock clock;
   @Autowired ConfigurationService config;
 
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  CertificateValidator certificates;
+
   static class MutableClock extends Clock {
     private Instant now = Instant.parse("2026-10-11T00:00:00Z").minusSeconds(3600);
 
@@ -73,12 +76,24 @@ class AcceptanceTest {
   }
 
   private JsonNode state(Cookie cookie) throws Exception {
-    return mapper.readTree(
-        mvc.perform(get("/api/coven").cookie(cookie))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse()
-            .getContentAsString());
+    JsonNode result =
+        mapper.readTree(
+            mvc.perform(get("/api/coven").cookie(cookie))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
+    assertNoCounters(result.path("stats"));
+    assertNoCounters(result.path("history"));
+    return result;
+  }
+
+  private void assertNoCounters(JsonNode node) {
+    if (node.isObject()) {
+      for (String field : List.of("total", "verified", "eligible", "members", "n"))
+        assertFalse(node.has(field), "Public counter leaked: " + field);
+    }
+    if (node.isContainerNode()) node.forEach(this::assertNoCounters);
   }
 
   private JsonNode postJson(Cookie cookie, Object body, int expected, boolean admin)
@@ -111,24 +126,24 @@ class AcceptanceTest {
     Cookie member = session();
     assertTrue(((MockCookie) member).isHttpOnly());
     var s = state(member);
-    assertEquals(0, s.path("stats").path("total").asInt());
-    assertEquals(0, s.path("stats").path("verified").asInt());
+    assertFalse(s.path("stats").path("hasParticipants").asBoolean());
+    assertEquals(0, s.path("stats").path("percentage").asDouble());
     assertTrue(s.path("config").path("scoring").isMissingNode());
     assertTrue(s.path("participant").isNull());
     // Selecting a country happens exclusively in React; no participant mutation exists.
     assertEquals(0, state(member).path("stats").path("people").size());
     var q = quiz(member, "PH", 0);
     assertEquals("cullen", q.path("clan").asText());
-    assertEquals(0, state(member).path("stats").path("total").asInt());
+    assertFalse(state(member).path("stats").path("hasParticipants").asBoolean());
     var confirm = Map.of("action", "confirm", "resultId", q.path("resultId").asText());
     postJson(member, confirm, 200, false);
     postJson(member, confirm, 200, false);
     s = state(member);
-    assertEquals(1, s.path("stats").path("total").asInt());
-    assertEquals(1, s.path("stats").path("clans").get(0).path("members").asInt());
+    assertTrue(s.path("stats").path("hasParticipants").asBoolean());
+    assertEquals(100, s.path("stats").path("clans").get(0).path("share").asDouble());
     assertEquals("PH", s.path("participant").path("country").asText());
     assertEquals("SEA", s.path("participant").path("region").asText());
-    assertEquals(0, s.path("stats").path("verified").asInt());
+    assertEquals(0, s.path("stats").path("percentage").asDouble());
     Cookie outsider = session();
     postJson(outsider, confirm, 400, false);
     postJson(outsider, Map.of("action", "admin"), 401, false);
@@ -142,6 +157,8 @@ class AcceptanceTest {
     mvc.perform(multipart("/api/coven").cookie(member).param("url", "https://example.test/proof"))
         .andExpect(status().isBadRequest());
     clock.at("2026-10-11T09:30:00+09:00");
+    org.mockito.Mockito.when(certificates.validate(org.mockito.ArgumentMatchers.any(byte[].class)))
+        .thenReturn("a".repeat(64));
     byte[] png =
         Base64.getDecoder()
             .decode(
@@ -151,23 +168,19 @@ class AcceptanceTest {
                 .file(new MockMultipartFile("file", "proof.png", "image/png", png))
                 .cookie(member))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("PENDING"));
+        .andExpect(jsonPath("$.status").value("VERIFIED"));
     s = state(member);
-    assertEquals(0, s.path("stats").path("verified").asInt());
     String proof = s.path("myProofs").get(0).path("id").asText();
     mvc.perform(get("/api/proof/" + proof).cookie(outsider)).andExpect(status().isNotFound());
-    mvc.perform(get("/api/proof/" + proof).cookie(member))
-        .andExpect(status().isOk())
-        .andExpect(content().bytes(png));
-    postJson(outsider, Map.of("action", "review", "id", proof, "status", "VERIFIED"), 401, false);
-    postJson(member, Map.of("action", "review", "id", proof, "status", "VERIFIED"), 200, true);
+    mvc.perform(get("/api/proof/" + proof).cookie(member)).andExpect(status().isNotFound());
+    postJson(member, Map.of("action", "review", "id", proof, "status", "VERIFIED"), 400, true);
     s = state(member);
-    assertEquals(1, s.path("stats").path("verified").asInt());
+    assertEquals(100, s.path("stats").path("percentage").asDouble());
     var c = s.path("stats").path("schedules").get(0).path("clans").get(0);
-    assertEquals(1, c.path("verified").asInt());
-    assertEquals(1, c.path("eligible").asInt());
+    assertEquals(100, c.path("percentage").asDouble());
+    assertTrue(c.path("hasEligible").asBoolean());
     for (int i = 1; i < 4; i++)
-      assertEquals(0, s.path("stats").path("clans").get(i).path("verified").asInt());
+      assertEquals(0, s.path("stats").path("clans").get(i).path("percentage").asDouble());
     mvc.perform(multipart("/api/coven").cookie(member).param("url", "https://example.test/second"))
         .andExpect(status().isConflict());
     var late = quiz(outsider, "IT", 1);
@@ -186,7 +199,7 @@ class AcceptanceTest {
             .get(0)
             .path("clans")
             .get(1)
-            .path("eligible")
+            .path("percentage")
             .asInt());
     clock.at("2026-10-11T12:00:00+09:00");
     mvc.perform(
@@ -195,7 +208,25 @@ class AcceptanceTest {
                 .cookie(member))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("DUPLICATE"));
-    assertEquals(1, state(member).path("stats").path("verified").asInt());
+    assertEquals(100.0 / 3, state(member).path("stats").path("percentage").asDouble(), 0.001);
+    // Invalid and duplicate certificates do not consume the participant's slot.
+    org.mockito.Mockito.when(certificates.validate(org.mockito.ArgumentMatchers.any(byte[].class)))
+        .thenThrow(ParticipationService.bad("Certificate not recognized."));
+    mvc.perform(
+            multipart("/api/coven")
+                .file(new MockMultipartFile("file", "screen.png", "image/png", png))
+                .cookie(outsider))
+        .andExpect(status().isBadRequest());
+    assertTrue(state(outsider).path("myProofs").isEmpty());
+    org.mockito.Mockito.doReturn("b".repeat(64))
+        .when(certificates)
+        .validate(org.mockito.ArgumentMatchers.any(byte[].class));
+    mvc.perform(
+            multipart("/api/coven")
+                .file(new MockMultipartFile("file", "certificate.png", "image/png", png))
+                .cookie(outsider))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("VERIFIED"));
     // Config change must not rewrite the already frozen daily schedule.
     var updated = config.current();
     ((ObjectNode) updated.path("schedules").get(0)).put("start", "08:30");
@@ -204,11 +235,11 @@ class AcceptanceTest {
     clock.at("2026-10-12T00:00:00+09:00");
     s = state(member);
     assertEquals("2026-10-12", s.path("day").asText());
-    assertEquals(2, s.path("stats").path("total").asInt());
-    assertEquals(0, s.path("stats").path("verified").asInt());
+    assertTrue(s.path("stats").path("hasParticipants").asBoolean());
+    assertEquals(0, s.path("stats").path("percentage").asDouble());
     assertEquals(0, s.path("myProofs").size());
     assertEquals("08:30", s.path("schedules").get(0).path("start").asText());
-    assertEquals(1, s.path("history").get(0).path("verified").asInt());
+    assertEquals(200.0 / 7, s.path("history").get(0).path("percentage").asDouble(), 0.001);
     var history = s.path("history").deepCopy();
     postJson(member, Map.of("action", "review", "id", proof, "status", "REJECTED"), 400, true);
     Cookie fresh = session();
@@ -223,15 +254,16 @@ class AcceptanceTest {
     var scoring = config.current().path("scoring");
     for (int i = 0; i < 4; i++)
       assertEquals(
-          RaceRules.CLANS.get(i),
-          RaceRules.sort(mapper.valueToTree(Collections.nCopies(8, i)), scoring, null).clan());
+          GatheringRules.CLANS.get(i),
+          GatheringRules.sort(mapper.valueToTree(Collections.nCopies(8, i)), scoring, null).clan());
     JsonNode answers = mapper.valueToTree(List.of(0, 0, 0, 0, 1, 1, 1, 1));
-    assertEquals(List.of("cullen", "volturi"), RaceRules.sort(answers, scoring, null).tied());
-    assertEquals("volturi", RaceRules.sort(answers, scoring, "volturi").clan());
-    assertNull(RaceRules.sort(answers, scoring, "denali").clan());
-    assertEquals(LocalDate.of(2026, 10, 12), RaceRules.day(Instant.parse("2026-10-11T15:00:00Z")));
+    assertEquals(List.of("cullen", "volturi"), GatheringRules.sort(answers, scoring, null).tied());
+    assertEquals("volturi", GatheringRules.sort(answers, scoring, "volturi").clan());
+    assertNull(GatheringRules.sort(answers, scoring, "denali").clan());
+    assertEquals(
+        LocalDate.of(2026, 10, 12), GatheringRules.day(Instant.parse("2026-10-11T15:00:00Z")));
     var windows =
-        RaceRules.windows(
+        GatheringRules.windows(
             LocalDate.of(2026, 10, 11),
             config.current().path("schedules"),
             Instant.parse("2026-10-11T02:00:00Z").toEpochMilli());

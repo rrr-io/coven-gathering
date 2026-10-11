@@ -53,6 +53,8 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: maven
+      - name: Install certificate OCR for tests
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
       - run: mvn -B verify
         working-directory: backend
       - uses: actions/upload-artifact@v4
@@ -109,7 +111,7 @@ jobs:
         run: |
           set -eu
           scp app.jar "$TARGET:/opt/coven-gathering/app.jar.next"
-          scp deploy/docker-compose.yml .env "$TARGET:/opt/coven-gathering/"
+          scp deploy/docker-compose.yml deploy/Dockerfile deploy/purge-legacy-proofs.sh .env "$TARGET:/opt/coven-gathering/"
           rm .env
           ssh "$TARGET" 'bash -se' <<'REMOTE'
           cd /opt/coven-gathering
@@ -117,7 +119,8 @@ jobs:
           if test -f app.jar; then cp app.jar app.jar.previous; fi
           mv app.jar.next app.jar
           docker compose up -d --wait --wait-timeout 180 db
-          docker compose up -d --force-recreate --wait --wait-timeout 180 backend
+          docker compose up -d --build --force-recreate --wait --wait-timeout 180 backend
+          bash purge-legacy-proofs.sh
           REMOTE
       - name: Deploy React static files
         if: ${{ vars.FRONTEND_HOST != 'vercel' }}

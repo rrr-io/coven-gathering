@@ -28,17 +28,3 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     );
   return response;
 }
-export async function openPrivateProof(id: string) {
-  const response = await fetch("/api/proof/" + id, {
-    headers: authorization ? { Authorization: authorization } : {},
-    credentials: "same-origin",
-  });
-  if (!response.ok) throw Error("Unable to open private proof.");
-  const url = URL.createObjectURL(await response.blob());
-  const a = document.createElement("a");
-  a.href = url;
-  a.target = "_blank";
-  a.rel = "noopener";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-}

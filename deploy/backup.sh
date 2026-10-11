@@ -7,9 +7,8 @@ backup_root="${1:?Pass an absolute backup directory}"
 umask 077
 mkdir -p "$backup_root"
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
-# Quiesce writes so database references and proof files belong to one snapshot.
+# Pause check-ins while taking the database backup.
 docker compose stop backend
 trap 'docker compose start backend >/dev/null' EXIT
 docker compose exec -T db pg_dump -U coven -d coven -Fc > "$backup_root/coven-$stamp.dump"
-docker run --rm -v coven-gathering_coven-proofs:/proofs:ro alpine:3.22 tar -C /proofs -czf - . > "$backup_root/coven-proofs-$stamp.tar.gz"
 echo "Backup completed: $stamp"

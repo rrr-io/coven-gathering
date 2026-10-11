@@ -1,4 +1,4 @@
-import { apiFetch, setAdmin, clearAdmin, openPrivateProof } from "./api";
+import { apiFetch, setAdmin, clearAdmin } from "./api";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
@@ -24,11 +24,11 @@ import {
 } from "lucide-react";
 import countries from "./lib/countries.json";
 import { clans as defaults, defaultConfig, rules } from "./lib/config";
-import { percentage, leader } from "./lib/engine";
+import { leader } from "./lib/engine";
 const nav = [
   ["home", "Home"],
   ["clans", "Clans"],
-  ["race", "Race"],
+  ["gathering", "Gathering"],
   ["worldwide", "Worldwide"],
   ["history", "History"],
   ["guide", "MAMA guide"],
@@ -138,14 +138,13 @@ export default function Page() {
     [busy, setBusy] = useState(false),
     [quizError, setQuizError] = useState("");
   const [adminData, setAdminData] = useState<any>(null),
-    [adminTab, setAdminTab] = useState("proofs"),
+    [adminTab, setAdminTab] = useState("coordination"),
     [category, setCategory] = useState("general"),
     [draft, setDraft] = useState(""),
-    [raceWindow, setRaceWindow] = useState<number | null>(null),
+    [gatheringWindow, setGatheringWindow] = useState<number | null>(null),
     [historyDay, setHistoryDay] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [proofUrl, setProofUrl] = useState("");
   const cfg = data?.config || defaultConfig,
     clans = cfg.clans,
     p = data?.participant,
@@ -172,14 +171,14 @@ export default function Page() {
   const selectedSchedule = stats?.schedules.find(
     (s: any) =>
       s.id ===
-      (raceWindow ||
+      (gatheringWindow ||
         live?.id ||
         data?.schedules.filter((s: any) => s.endAt <= clock).at(-1)?.id),
   );
-  const raceStats =
+  const gatheringStats =
     selectedSchedule?.clans ||
-    clans.map((c: any) => ({ clan: c.id, verified: 0, eligible: 0 }));
-  const leaders = leader(raceStats);
+    clans.map((c: any) => ({ clan: c.id, percentage: 0 }));
+  const leaders = leader(gatheringStats);
   const selectedCountry = cn(country);
   const myClan = clans.find((c: any) => c.id === p?.clan);
   async function refresh() {
@@ -313,7 +312,6 @@ export default function Page() {
     setBusy(true);
     try {
       const form = new FormData();
-      form.set("url", proofUrl);
       if (fileRef.current?.files?.[0])
         form.set("file", fileRef.current.files[0]);
       const r = await apiFetch("/api/coven", { method: "POST", body: form });
@@ -321,10 +319,9 @@ export default function Page() {
       if (!r.ok) throw Error(j.error);
       setNotice(
         j.status === "DUPLICATE"
-          ? "This proof has already been submitted and is marked duplicate."
-          : "Proof received. It will count after an administrator verifies it.",
+          ? "This certificate has already been used. Upload a different certificate."
+          : "Certificate accepted. Your check-in counts immediately; the image is not stored.",
       );
-      setProofUrl("");
       if (fileRef.current) fileRef.current.value = "";
       await refresh();
     } catch (e) {
@@ -361,10 +358,9 @@ export default function Page() {
             <div className="clan-bottom">
               <span>
                 <b>
-                  {stats?.clans.find((x: any) => x.clan === c.id)?.members ??
-                    "—"}
+                  {(stats?.clans.find((x: any) => x.clan === c.id)?.share ?? 0).toFixed(1)}%
                 </b>{" "}
-                ENGENEs
+                of the gathering
               </span>
               <button
                 className="icon-link"
@@ -417,13 +413,13 @@ export default function Page() {
               </p>
             </div>
           );
-        }) || <div className="empty">Loading race windows…</div>}
+        }) || <div className="empty">Loading gathering windows…</div>}
       </div>
     );
   }
   function leaderboard() {
     return (
-      <div className="race-panel">
+      <div className="gathering-panel">
         <div className="row">
           <div>
             <div className="eyebrow">
@@ -441,37 +437,37 @@ export default function Page() {
             </h3>
             <p>
               {!leaders.length
-                ? "No verified check-ins yet. The next chapter begins with you."
-                : "Fan-made participation only. Every verified effort counts."}
+                ? "No accepted check-ins yet. The next chapter begins with you."
+                : "Fan-made participation only. Every accepted certificate counts."}
             </p>
           </div>
           <Moon className="panel-moon" size={36} strokeWidth={1} />
         </div>
-        <div className="race-table">
-          {raceStats.map((s: any, i: number) => {
+        <div className="gathering-table">
+          {gatheringStats.map((s: any, i: number) => {
             const c = clans.find((c: any) => c.id === s.clan);
             return (
               <div
-                className="race-row"
+                className="gathering-row"
                 key={c.id}
                 style={{ "--clan": c.color } as any}
               >
                 <span className="rank">0{i + 1}</span>
                 <Crest clan={c.id} small />
-                <div className="race-name">
+                <div className="gathering-name">
                   <strong>{c.name}</strong>
                   <span>
-                    {s.verified} verified / {s.eligible} eligible
+                    Certificate participation
                   </span>
                 </div>
                 <div className="bar">
                   <div
-                    style={{ width: percentage(s.verified, s.eligible) + "%" }}
+                    style={{ width: s.percentage + "%" }}
                   />
                 </div>
                 <strong className="percent">
-                  {percentage(s.verified, s.eligible).toFixed(
-                    s.verified ? 1 : 0,
+                  {s.percentage.toFixed(
+                    s.percentage ? 1 : 0,
                   )}
                   <small>%</small>
                 </strong>
@@ -480,7 +476,7 @@ export default function Page() {
           })}
         </div>
         <div className="panel-foot">
-          <ShieldCheck size={14} /> Only verified proofs count{" "}
+          <ShieldCheck size={14} /> Only accepted certificates count{" "}
           <span>Denominators locked at schedule start</span>
         </div>
       </div>
@@ -495,8 +491,8 @@ export default function Page() {
         <div className="world-stats">
           <div>
             <Globe2 />
-            <strong>{stats?.total ?? "—"}</strong>
-            <span>REGISTERED ENGENEs</span>
+            <strong>{(stats?.percentage ?? 0).toFixed(1)}%</strong>
+            <span>DAILY CERTIFICATE PARTICIPATION</span>
           </div>
           <div>
             <Compass />
@@ -509,6 +505,7 @@ export default function Page() {
             <span>VOTING REGIONS</span>
           </div>
         </div>
+        <p className="muted">Country and coven shares are percentages of the worldwide gathering.</p>
         <div className="table-wrap">
           <table>
             <thead>
@@ -517,7 +514,7 @@ export default function Page() {
                 {clans.map((c: any) => (
                   <th key={c.id}>{c.name}</th>
                 ))}
-                <th>TOTAL</th>
+                <th>GLOBAL SHARE</th>
               </tr>
             </thead>
             <tbody>
@@ -530,13 +527,13 @@ export default function Page() {
                     <td key={c.id}>
                       {people
                         .filter((x: any) => x.country === id && x.clan === c.id)
-                        .reduce((n: number, x: any) => n + x.n, 0)}
+                        .reduce((n: number, x: any) => n + x.share, 0).toFixed(1)}%
                     </td>
                   ))}
                   <td>
                     {people
                       .filter((x: any) => x.country === id)
-                      .reduce((n: number, x: any) => n + x.n, 0)}
+                      .reduce((n: number, x: any) => n + x.share, 0).toFixed(1)}%
                   </td>
                 </tr>
               ))}
@@ -563,26 +560,15 @@ export default function Page() {
               {regions.map((r) => {
                 const rows = people.filter((x: any) => x.region === r);
                 const zone = cn(rows[0].country)?.timezone || "Asia/Seoul";
-                const activity = stats.activity.filter(
-                  (a: any) => a.region === r,
-                );
-                const verified = activity.reduce(
-                    (n: number, a: any) => n + a.verified,
-                    0,
-                  ),
-                  eligible = activity.reduce(
-                    (n: number, a: any) => n + a.eligible,
-                    0,
-                  );
+                const activity = stats.regionActivity.find((a: any) => a.region === r);
                 return (
                   <div className="panel" key={r}>
                     <div className="eyebrow">{cfg.regions[r] || r}</div>
                     <h3>
-                      {rows.reduce((n: number, x: any) => n + x.n, 0)} ENGENEs
+                      {rows.reduce((n: number, x: any) => n + x.share, 0).toFixed(1)}% of the gathering
                     </h3>
                     <p>
-                      {verified} verified / {eligible} eligible ·{" "}
-                      {percentage(verified, eligible).toFixed(1)}%
+                      {(activity?.percentage ?? 0).toFixed(1)}%
                     </p>
                     <p>
                       {stats.activityWindow || "No window started"} ·
@@ -698,8 +684,8 @@ export default function Page() {
                     {p ? "ENTER MY COVEN" : "BEGIN THE SORTING"}
                     <ArrowUpRight size={17} />
                   </button>
-                  <button className="secondary" onClick={() => go("race")}>
-                    VIEW LIVE RACE
+                  <button className="secondary" onClick={() => go("gathering")}>
+                    VIEW LIVE GATHERING
                     <ArrowRight size={16} />
                   </button>
                 </div>
@@ -720,7 +706,7 @@ export default function Page() {
                   </strong>
                 </div>
                 <div>
-                  <span className="eyebrow">CURRENT RACE DAY</span>
+                  <span className="eyebrow">CURRENT GATHERING DAY</span>
                   <strong className="date">{data?.day || "—"}</strong>
                 </div>
                 <div>
@@ -729,7 +715,7 @@ export default function Page() {
                       ? "WINDOW CLOSES IN"
                       : next
                         ? "NEXT WINDOW IN"
-                        : "NEW RACE IN"}
+                        : "NEW GATHERING IN"}
                   </span>
                   <strong>{countDown}</strong>
                 </div>
@@ -776,13 +762,13 @@ export default function Page() {
                 <div className="section-heading">
                   <div>
                     <div className="eyebrow">
-                      THE COVEN RACE <span className="tiny-dot" />{" "}
+                      THE COVEN GATHERING <span className="tiny-dot" />{" "}
                       {data?.day || "KST"}
                     </div>
                     <h2>A gathering, built together.</h2>
                   </div>
-                  <button className="text-link" onClick={() => go("race")}>
-                    View the race
+                  <button className="text-link" onClick={() => go("gathering")}>
+                    View the gathering
                     <ArrowUpRight size={16} />
                   </button>
                 </div>
@@ -792,7 +778,7 @@ export default function Page() {
                 {sectionHeader(
                   "TODAY’S OPERATION",
                   "Four moments. One purpose.",
-                  "Four synchronized windows. All race times use Asia/Seoul.",
+                  "Four synchronized windows. All gathering times use Asia/Seoul.",
                 )}
                 {scheduleCards()}
               </section>
@@ -851,12 +837,12 @@ export default function Page() {
                 </div>
               </>
             )}
-            {page === "race" && (
+            {page === "gathering" && (
               <>
                 {sectionHeader(
-                  "LIVE CLAN RACE · " + (data?.day || "KST"),
+                  "LIVE CLAN GATHERING · " + (data?.day || "KST"),
                   "Every check-in counts.",
-                  "Verified check-ins ÷ eligible members × 100. These are fan-made participation statistics, never official voting results.",
+                  "Accepted certificates ÷ eligible members × 100. These are fan-made participation statistics, never official voting results.",
                 )}
                 <div className="window-tabs">
                   {data?.schedules.map((s: any) => (
@@ -865,7 +851,7 @@ export default function Page() {
                       className={
                         selectedSchedule?.id === s.id ? "selected" : ""
                       }
-                      onClick={() => setRaceWindow(s.id)}
+                      onClick={() => setGatheringWindow(s.id)}
                     >
                       {s.name}
                       <small>
@@ -880,15 +866,7 @@ export default function Page() {
                     <span className="eyebrow">ALL OUT · {live.name}</span>
                     <h3>Every unchecked coven member — go now.</h3>
                     <p>
-                      {data.stats.schedules
-                        .find((s: any) => s.id === live.id)
-                        ?.clans.reduce(
-                          (n: number, c: any) =>
-                            n + Math.max(0, c.eligible - c.verified),
-                          0,
-                        )}{" "}
-                      eligible members still without a verified check-in this
-                      window.
+                      Upload your voting certificate to contribute to your coven’s participation percentage.
                     </p>
                     <button className="primary" onClick={join}>
                       GO TO CHECK-IN
@@ -916,7 +894,7 @@ export default function Page() {
             {page === "history" && (
               <>
                 {sectionHeader(
-                  "RACE HISTORY",
+                  "GATHERING HISTORY",
                   "The nights we shared.",
                   "Final snapshots are preserved at the KST day boundary. New members never change past results.",
                 )}
@@ -925,11 +903,11 @@ export default function Page() {
                     <Moon size={38} strokeWidth={1} />
                     <h3>Our story is just beginning.</h3>
                     <p>
-                      Completed race days will appear here after the first
+                      Completed gathering days will appear here after the first
                       midnight in Seoul.
                     </p>
-                    <button className="text-link" onClick={() => go("race")}>
-                      Today’s race
+                    <button className="text-link" onClick={() => go("gathering")}>
+                      Today’s gathering
                       <ArrowRight size={15} />
                     </button>
                   </div>
@@ -940,7 +918,7 @@ export default function Page() {
                         <summary>
                           <span>{h.day}</span>
                           <span>
-                            {h.total} registered · {h.verified} verified
+                            {h.percentage.toFixed(1)}% daily participation
                           </span>
                           <ChevronRight size={18} />
                         </summary>
@@ -954,14 +932,11 @@ export default function Page() {
                               <div key={c.clan}>
                                 <strong>{c.clan.toUpperCase()}</strong>
                                 <h3>
-                                  {percentage(c.verified, c.eligible).toFixed(
+                                  {c.percentage.toFixed(
                                     1,
                                   )}
                                   %
                                 </h3>
-                                <p>
-                                  {c.verified} / {c.eligible} eligible slots
-                                </p>
                               </div>
                             ))}
                           </div>
@@ -981,11 +956,7 @@ export default function Page() {
                                     <td>{s.name}</td>
                                     {s.clans.map((c: any) => (
                                       <td key={c.clan}>
-                                        {c.verified}/{c.eligible} ·{" "}
-                                        {percentage(
-                                          c.verified,
-                                          c.eligible,
-                                        ).toFixed(1)}
+                                        {c.percentage.toFixed(1)}
                                         %
                                       </td>
                                     ))}
@@ -998,10 +969,10 @@ export default function Page() {
                             {h.people
                               .map(
                                 (p: any) =>
-                                  `${cn(p.country)?.name} · ${p.region} · ${p.clan}: ${p.n}`,
+                                  `${cn(p.country)?.name} · ${p.region} · ${p.clan}: ${p.share.toFixed(1)}% of the gathering`,
                               )
                               .join(" / ") ||
-                              "No registered participants on this day."}
+                              "The gathering was waiting on this day."}
                           </p>
                         </div>
                       </details>
@@ -1013,7 +984,7 @@ export default function Page() {
             {page === "guide" && (
               <>
                 {sectionHeader(
-                  "OFFICIAL INFORMATION · SEPARATE FROM THE RACE",
+                  "OFFICIAL INFORMATION · SEPARATE FROM THE GATHERING",
                   "MAMA voting guide.",
                   "The gathering encourages participation. Actual votes must be cast on the official platform under official rules.",
                 )}
@@ -1064,7 +1035,7 @@ export default function Page() {
               <>
                 {sectionHeader(
                   "THE COVEN CODE",
-                  "A fair race. A united fandom.",
+                  "A fair gathering. A united fandom.",
                 )}
                 <ol className="rules-list">
                   {rules.map((r, i) => (
@@ -1078,10 +1049,8 @@ export default function Page() {
                   <h3>Your participation, your privacy.</h3>
                   <p>
                     Only aggregate statistics are public. Names, emails, precise
-                    locations, IP addresses, individual histories, proof URLs
-                    and moderation details are never shown on public dashboards.
-                    Uploaded proofs can be seen only by their owner and the
-                    administrator.
+                    locations, IP addresses and individual histories are never shown on public dashboards.
+                    Certificate images are scanned automatically and are not stored.
                   </p>
                   <p>
                     Your participation is remembered in this browser with a
@@ -1133,7 +1102,7 @@ export default function Page() {
                       </p>
                     </div>
                     <div>
-                      <span className="eyebrow">SEOUL · RACE TIME</span>
+                      <span className="eyebrow">SEOUL · GATHERING TIME</span>
                       <strong>{time(clock, "Asia/Seoul", true)}</strong>
                       <p>Asia/Seoul · UTC+9</p>
                     </div>
@@ -1176,40 +1145,30 @@ export default function Page() {
                             : "Today’s windows have ended. See you tomorrow."}
                       </p>
                       <p>
-                        Submit your voting or MV check-in proof. Remove any
-                        personal details before uploading. Proofs remain
-                        private.
+                        Upload the full Mnet Plus voting certificate, including its date and number. Voting-screen screenshots are not accepted. Images are processed automatically and are not stored.
                       </p>
                       <span className="lock">
-                        <ShieldCheck size={14} /> Admin verification required
+                        <ShieldCheck size={14} /> Automatic certificate check
                       </span>
                     </div>
                     {live &&
                     p.created_at < live.startAt &&
                     !data.myProofs.some(
-                      (x: any) => x.schedule_id === live.id,
+                      (x: any) => x.schedule_id === live.id && x.status === "VERIFIED",
                     ) ? (
                       <form onSubmit={submitProof}>
-                        <label htmlFor="url">Proof URL</label>
-                        <input
-                          id="url"
-                          type="url"
-                          placeholder="https://…"
-                          value={proofUrl}
-                          onChange={(e) => setProofUrl(e.target.value)}
-                        />
-                        <div className="or">OR UPLOAD AN IMAGE</div>
                         <label className="upload" htmlFor="file">
                           <Upload size={20} />
                           <span>
-                            Choose a proof image
-                            <small>JPG, PNG, WEBP · up to 5 MB</small>
+                            Choose a voting certificate
+                            <small>JPG, PNG · up to 5 MB</small>
                           </span>
                           <input
                             ref={fileRef}
                             id="file"
                             type="file"
-                            accept="image/jpeg,image/png,image/webp"
+                            accept="image/jpeg,image/png"
+                            required
                           />
                         </label>
                         <button className="primary" disabled={busy}>
@@ -1223,11 +1182,9 @@ export default function Page() {
                         <h3>
                           {live &&
                           data.myProofs.find(
-                            (x: any) => x.schedule_id === live.id,
+                            (x: any) => x.schedule_id === live.id && x.status === "VERIFIED",
                           )
-                            ? data.myProofs.find(
-                                (x: any) => x.schedule_id === live.id,
-                              ).status
+                            ? "CERTIFICATE ACCEPTED"
                             : live
                               ? "You’re in for the next window."
                               : "A little patience, ENGENE."}
@@ -1235,7 +1192,7 @@ export default function Page() {
                         <p>
                           {live && p.created_at >= live.startAt
                             ? "This window’s eligible members were locked before you joined."
-                            : "One submission per window. Only verified proofs enter the race."}
+                            : "One submission per window. Only accepted certificates enter the gathering."}
                         </p>
                       </div>
                     )}
@@ -1245,9 +1202,9 @@ export default function Page() {
                       <div key={s.id}>
                         <span>{s.name}</span>
                         <span className="status">
-                          {data.myProofs.find(
-                            (x: any) => x.schedule_id === s.id,
-                          )?.status || "NOT SUBMITTED"}
+                          {data.myProofs.some(
+                            (x: any) => x.schedule_id === s.id && x.status === "VERIFIED",
+                          ) ? "ACCEPTED" : "NOT SUBMITTED"}
                         </span>
                       </div>
                     ))}
@@ -1260,7 +1217,7 @@ export default function Page() {
                   {sectionHeader(
                     "KEEPERS OF THE GATHERING",
                     "Admin console.",
-                    "Proofs and moderation details are private. Archived days are immutable.",
+                    "Certificates count automatically after a format check. Images are never stored. Archived days are immutable.",
                   )}
                   <button
                     className="text-link"
@@ -1273,7 +1230,7 @@ export default function Page() {
                     Sign out <LockKeyhole size={12} />
                   </button>
                   <div className="window-tabs">
-                    {["proofs", "coordination", "configuration"].map((t) => (
+                    {["coordination", "configuration"].map((t) => (
                       <button
                         key={t}
                         className={adminTab === t ? "selected" : ""}
@@ -1285,90 +1242,6 @@ export default function Page() {
                   </div>
                   {!adminData ? (
                     <div className="empty">Loading administration…</div>
-                  ) : adminTab === "proofs" ? (
-                    <>
-                      <p className="muted">
-                        {cfg.admin.reviewNote} Pending proofs at day close never
-                        count retroactively.
-                      </p>
-                      {!adminData.proofs.length ? (
-                        <div className="empty tall">
-                          <ShieldCheck size={32} />
-                          <h3>No proofs to review.</h3>
-                          <p>
-                            Real submissions will appear here during live race
-                            windows.
-                          </p>
-                        </div>
-                      ) : (
-                        adminData.proofs.map((proof: any) => (
-                          <div className="review" key={proof.id}>
-                            <div>
-                              <span className="eyebrow">
-                                {proof.race_day_id} · WINDOW {proof.schedule_id}{" "}
-                                · {proof.clan}
-                              </span>
-                              <h3>{proof.status}</h3>
-                              {proof.object_key ? (
-                                <button
-                                  className="text-link"
-                                  onClick={() =>
-                                    openPrivateProof(proof.id).catch((e) =>
-                                      setNotice(e.message),
-                                    )
-                                  }
-                                >
-                                  View private image
-                                  <ExternalLink size={14} />
-                                </button>
-                              ) : (
-                                <a
-                                  className="text-link"
-                                  href={proof.proof_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  Open submitted URL
-                                  <ExternalLink size={14} />
-                                </a>
-                              )}
-                            </div>
-                            {proof.status === "PENDING" &&
-                              proof.race_day_id === data.day && (
-                                <div className="review-actions">
-                                  {["VERIFIED", "REJECTED", "DUPLICATE"].map(
-                                    (status) => (
-                                      <button
-                                        className="secondary"
-                                        disabled={busy}
-                                        key={status}
-                                        onClick={async () => {
-                                          setBusy(true);
-                                          try {
-                                            await post({
-                                              action: "review",
-                                              id: proof.id,
-                                              status,
-                                            });
-                                            await loadAdmin();
-                                            await refresh();
-                                          } catch (e) {
-                                            setNotice((e as Error).message);
-                                          } finally {
-                                            setBusy(false);
-                                          }
-                                        }}
-                                      >
-                                        {status}
-                                      </button>
-                                    ),
-                                  )}
-                                </div>
-                              )}
-                          </div>
-                        ))
-                      )}
-                    </>
                   ) : adminTab === "coordination" ? (
                     <>
                       <p className="muted">
@@ -1380,9 +1253,9 @@ export default function Page() {
                           <thead>
                             <tr>
                               <th>COUNTRY / REGION</th>
-                              <th>MEMBERS</th>
-                              <th>VERIFIED / ELIGIBLE</th>
-                              <th>UNCHECKED</th>
+                              <th>GLOBAL SHARE</th>
+                              <th>PARTICIPATION</th>
+                              <th>REMAINING</th>
                               <th>COUNTRY TIME</th>
                               <th>NEXT WINDOW</th>
                             </tr>
@@ -1399,17 +1272,11 @@ export default function Page() {
                                 (r: any) => r.country === id,
                               );
                               const zone = cn(id)?.timezone || "Asia/Seoul";
-                              const a = data.stats.activity.filter(
+                              const a = data.stats.countryActivity.filter(
                                 (x: any) => x.country === id,
                               );
-                              const v = a.reduce(
-                                  (n: number, x: any) => n + x.verified,
-                                  0,
-                                ),
-                                el = a.reduce(
-                                  (n: number, x: any) => n + x.eligible,
-                                  0,
-                                );
+                              const participation = a[0]?.percentage ?? 0;
+                              const remaining = a[0]?.hasEligible ? 100 - participation : 0;
                               return (
                                 <tr key={id}>
                                   <td>
@@ -1418,18 +1285,18 @@ export default function Page() {
                                   </td>
                                   <td>
                                     {rows.reduce(
-                                      (n: number, r: any) => n + r.members,
+                                      (n: number, r: any) => n + r.share,
                                       0,
-                                    )}
+                                    ).toFixed(1)}%
                                   </td>
                                   <td>
-                                    {v} / {el}
+                                    {participation.toFixed(1)}%
                                     <small>
                                       {data.stats.activityWindow ||
                                         "No window started"}
                                     </small>
                                   </td>
-                                  <td>{Math.max(0, el - v)}</td>
+                                  <td>{remaining.toFixed(1)}%</td>
                                   <td>
                                     {time(clock, zone)}
                                     <small>{time(clock)} KST</small>
@@ -1502,7 +1369,7 @@ export default function Page() {
                             await loadAdmin();
                             await refresh();
                             setNotice(
-                              "Configuration saved. Schedule changes apply from the next KST race day; historical records stay unchanged.",
+                              "Configuration saved. Schedule changes apply from the next KST gathering day; historical records stay unchanged.",
                             );
                           } catch (e) {
                             setNotice((e as Error).message);
@@ -1555,7 +1422,7 @@ export default function Page() {
                 >
                   <LockKeyhole />
                   <h3>Keepers of the gathering.</h3>
-                  <p>Sign in to review proofs and manage configuration.</p>
+                  <p>Sign in to coordinate participation and manage configuration.</p>
                   <label htmlFor="admin-user">Username</label>
                   <input
                     id="admin-user"
@@ -1611,7 +1478,7 @@ export default function Page() {
             An ENGENE fan-made project. Not affiliated with or endorsed by MAMA,
             CJ ENM, HYBE, ENHYPEN or Twilight.
             <br />
-            All race statistics reflect fan participation, not official MAMA
+            All gathering statistics reflect fan participation, not official MAMA
             voting results.
           </p>
           <span>FOR ENHYPEN. ALWAYS.</span>
@@ -1649,7 +1516,7 @@ export default function Page() {
               <p>
                 Your country helps us gather across timezones.
                 <br />
-                You’ll join the race only after accepting your coven.
+                You’ll join the gathering only after accepting your coven.
               </p>
               <label htmlFor="country-search">
                 Search country or territory
@@ -1853,7 +1720,7 @@ export default function Page() {
               </button>
               <p className="fine">
                 Accepting creates your participant record and locks your clan
-                for future race days.
+                for future gathering days.
               </p>
               <button
                 className="back"

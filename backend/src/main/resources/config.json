@@ -386,13 +386,13 @@
   },
   "content": {
     "hero": "The night brings us together.",
-    "intro": "An ENGENE fan-made participation race for ENHYPEN. Find your coven, show up together, and make every day count."
+    "intro": "An ENGENE fan-made participation gathering for ENHYPEN. Find your coven, show up together, and make every day count."
   },
   "banners": {
     "enabled": false,
     "text": ""
   },
   "admin": {
-    "reviewNote": "Review proofs before the race day closes at 00:00 KST."
+    "certificateNote": "Certificates are accepted automatically after a format check; images are not stored."
   }
 }

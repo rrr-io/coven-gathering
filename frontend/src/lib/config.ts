@@ -163,11 +163,11 @@ export const defaultConfig = {
   content: {
     hero: "The night brings us together.",
     intro:
-      "An ENGENE fan-made participation race for ENHYPEN. Find your coven, show up together, and make every day count.",
+      "An ENGENE fan-made participation gathering for ENHYPEN. Find your coven, show up together, and make every day count.",
   },
   banners: { enabled: false, text: "" },
   admin: {
-    reviewNote: "Review proofs before the race day closes at 00:00 KST.",
+    certificateNote: "Certificates are accepted automatically after a format check; images are not stored.",
   },
 };
 export type Config = typeof defaultConfig;
@@ -175,17 +175,17 @@ export const rules = [
   "Select your country.",
   "Complete the ENGENE × ENHYPEN sorting quiz.",
   "Accept your assigned clan.",
-  "Your clan remains locked across race days.",
+  "Your clan remains locked across gathering days.",
   "One valid check-in per participant, per schedule.",
-  "Only verified proofs count.",
-  "Duplicate proofs do not count.",
+  "Certificates count automatically after a format check.",
+  "Reused certificate numbers do not count.",
   "Rankings use participation percentage.",
   "Schedule denominators are captured at schedule start; new members join the next window.",
-  "The daily race resets at 00:00 KST.",
+  "The daily gathering resets at 00:00 KST.",
   "Previous results are archived and never recalculated.",
   "Country and region data are aggregated.",
-  "Individual identities and proofs remain private.",
-  "The Coven Race is a fan-made project.",
+  "Individual identities remain private. Certificate images are not stored.",
+  "The Coven Gathering is a fan-made project.",
   "Official MAMA rules always take priority.",
   "Do not harass or target other fandoms.",
 ];

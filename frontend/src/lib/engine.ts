@@ -1,6 +1,6 @@
 import { clans, schedules } from "./config";
 export const KST = "Asia/Seoul";
-export function raceDate(now = new Date()) {
+export function gatheringDate(now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: KST,
     year: "numeric",
@@ -12,7 +12,7 @@ export function dayStart(day: string) {
   return Date.parse(day + "T00:00:00+09:00");
 }
 export function nextDay(day: string) {
-  return raceDate(new Date(dayStart(day) + 86400000));
+  return gatheringDate(new Date(dayStart(day) + 86400000));
 }
 export function windows(day: string, defs = schedules, now = Date.now()) {
   return defs
@@ -49,16 +49,7 @@ export function sortQuiz(
 export function percentage(verified: number, eligible: number) {
   return eligible > 0 ? Math.min(100, (verified / eligible) * 100) : 0;
 }
-export function leader(
-  stats: { clan: string; verified: number; eligible: number }[],
-) {
-  const max = Math.max(
-    0,
-    ...stats.map((s) => percentage(s.verified, s.eligible)),
-  );
-  return max === 0
-    ? []
-    : stats
-        .filter((s) => percentage(s.verified, s.eligible) === max)
-        .map((s) => s.clan);
+export function leader(stats: { clan: string; percentage: number }[]) {
+  const max = Math.max(0, ...stats.map((s) => s.percentage));
+  return max === 0 ? [] : stats.filter((s) => s.percentage === max).map((s) => s.clan);
 }

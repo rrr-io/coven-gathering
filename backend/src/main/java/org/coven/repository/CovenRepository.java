@@ -25,9 +25,9 @@ public class CovenRepository {
     return jdbc.update(sql, args);
   }
 
-  public void lockRace() {
+  public void lockGathering() {
     jdbc.queryForObject(
-        "SELECT setting_value FROM settings WHERE setting_key='race_mutex' FOR UPDATE",
+        "SELECT setting_value FROM settings WHERE setting_key='gathering_mutex' FOR UPDATE",
         String.class);
   }
 

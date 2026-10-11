@@ -7,8 +7,7 @@ spring:
 app:
   origins: http://localhost:5173
   cookie-secure: false
-  proofs-dir: ${java.io.tmpdir}/coven-java-tests
 admin:
   username: admin
   password: integration-tests-only-password
-RACE_TICK_MS: 3600000
+GATHERING_TICK_MS: 3600000

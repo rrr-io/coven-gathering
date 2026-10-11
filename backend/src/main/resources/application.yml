@@ -12,6 +12,7 @@ spring:
     multipart:
       max-file-size: 5MB
       max-request-size: 6MB
+      file-size-threshold: 6MB
 server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
@@ -20,7 +21,7 @@ server:
 app:
   origins: ${APP_ORIGINS:http://localhost:5173}
   cookie-secure: ${COOKIE_SECURE:false}
-  proofs-dir: ${PROOFS_DIR:./data/proofs}
+  ocr-command: ${OCR_COMMAND:tesseract}
 admin:
   username: ${ADMIN_USER:admin}
   password: ${ADMIN_PASSWORD}

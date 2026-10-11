@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.time.*;
 import java.util.*;
 
-public final class RaceRules {
+public final class GatheringRules {
   public static final ZoneId KST = ZoneId.of("Asia/Seoul");
   public static final List<String> CLANS = List.of("cullen", "volturi", "denali", "egyptian");
 
-  private RaceRules() {}
+  private GatheringRules() {}
 
   public static LocalDate day(Instant now) {
     return now.atZone(KST).toLocalDate();

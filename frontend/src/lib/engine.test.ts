@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { sortQuiz, raceDate, windows, leader, percentage } from "./engine";
+import { sortQuiz, gatheringDate, windows, leader, percentage } from "./engine";
 import { defaultConfig } from "./config";
-describe("race and sorting rules", () => {
+describe("gathering and sorting rules", () => {
   it("produces all four covens", () => {
     ["cullen", "volturi", "denali", "egyptian"].forEach((clan, i) =>
       expect(sortQuiz(Array(8).fill(i), defaultConfig.scoring).clan).toBe(clan),
@@ -19,8 +19,8 @@ describe("race and sorting rules", () => {
     expect(sortQuiz(answers, defaultConfig.scoring, "denali").clan).toBeNull();
   });
   it("starts the new day at midnight in Seoul", () => {
-    expect(raceDate(new Date("2026-10-11T14:59:59Z"))).toBe("2026-10-11");
-    expect(raceDate(new Date("2026-10-11T15:00:00Z"))).toBe("2026-10-12");
+    expect(gatheringDate(new Date("2026-10-11T14:59:59Z"))).toBe("2026-10-11");
+    expect(gatheringDate(new Date("2026-10-11T15:00:00Z"))).toBe("2026-10-12");
   });
   it("excludes the exact end of a schedule", () => {
     expect(
@@ -29,12 +29,12 @@ describe("race and sorting rules", () => {
     ).toBe("ENDED");
   });
   it("has no fabricated leader, handles ties and zero denominators", () => {
-    expect(leader([{ clan: "cullen", eligible: 0, verified: 0 }])).toEqual([]);
+    expect(leader([{ clan: "cullen", percentage: 0 }])).toEqual([]);
     expect(percentage(0, 0)).toBe(0);
     expect(
       leader([
-        { clan: "cullen", eligible: 2, verified: 1 },
-        { clan: "denali", eligible: 4, verified: 2 },
+        { clan: "cullen", percentage: 50 },
+        { clan: "denali", percentage: 50 },
       ]),
     ).toEqual(["cullen", "denali"]);
   });
