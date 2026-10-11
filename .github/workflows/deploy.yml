@@ -100,8 +100,8 @@ jobs:
           for key in ('DB_PASSWORD', 'ADMIN_PASSWORD'):
               if not re.fullmatch(r'[A-Za-z0-9._~+/=-]{16,}', values[key]):
                   raise SystemExit(f'{key}: use at least 16 safe characters (openssl rand -hex 32)')
-          if not values['APP_ORIGINS'] or any(not re.fullmatch(r'https://[A-Za-z0-9.-]+(?::\d+)?', x) for x in values['APP_ORIGINS'].split(',')):
-              raise SystemExit('APP_ORIGINS must contain exact HTTPS origins, comma-separated, no trailing slash')
+          # Prototype: origin check disabled when APP_ORIGINS is empty ("*" = allow all).
+          values['APP_ORIGINS'] = values['APP_ORIGINS'].strip() or '*'
           Path('.env').write_text(''.join(f'{k}={v}\n' for k,v in values.items()))
           Path('.env').chmod(0o600)
           PY

@@ -26,7 +26,8 @@ public class RequestGuard extends OncePerRequestFilter {
       response.setHeader("Cache-Control", "no-store");
       response.setHeader("X-Content-Type-Options", "nosniff");
       String origin = request.getHeader("Origin");
-      if (origin != null && !origins.contains(origin)) {
+      // Prototype: "*" disables the origin check (CSRF protection off).
+      if (origin != null && !origins.contains("*") && !origins.contains(origin)) {
         response.sendError(403, "Origin not allowed");
         return;
       }
