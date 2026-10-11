@@ -1,0 +1,127 @@
+name: Deploy Coven
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deploy-coven
+  cancel-in-progress: false
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm test
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coven-frontend
+          path: frontend/dist
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: coven_test
+          POSTGRES_USER: coven_test
+          POSTGRES_PASSWORD: test-only-ci-db-pass
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U coven_test -d coven_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DB_URL: jdbc:postgresql://localhost:5432/coven_test
+      TEST_DB_DRIVER: org.postgresql.Driver
+      TEST_DB_USER: coven_test
+      TEST_DB_PASSWORD: test-only-ci-db-pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - run: mvn -B verify
+        working-directory: backend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coven-backend
+          path: backend/target/app.jar
+  deploy:
+    needs: [frontend, backend]
+    runs-on: ubuntu-latest
+    env:
+      TARGET: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: coven-frontend
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: coven-backend
+          path: .
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -eu
+          test -n "$SSH_KEY" && test -n "$SSH_HOST"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -T 10 -H "$SSH_HOST" > ~/.ssh/known_hosts
+          printf 'Host *\n  IdentityFile ~/.ssh/id_deploy\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
+      - name: Prepare runtime configuration
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          APP_ORIGINS: ${{ vars.APP_ORIGINS }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          values = {k: os.environ[k] for k in ('DB_PASSWORD', 'ADMIN_PASSWORD', 'APP_ORIGINS')}
+          for key in ('DB_PASSWORD', 'ADMIN_PASSWORD'):
+              if not re.fullmatch(r'[A-Za-z0-9._~+/=-]{16,}', values[key]):
+                  raise SystemExit(f'{key}: use at least 16 safe characters (openssl rand -hex 32)')
+          if not values['APP_ORIGINS'] or any(not re.fullmatch(r'https://[A-Za-z0-9.-]+(?::\d+)?', x) for x in values['APP_ORIGINS'].split(',')):
+              raise SystemExit('APP_ORIGINS must contain exact HTTPS origins, comma-separated, no trailing slash')
+          Path('.env').write_text(''.join(f'{k}={v}\n' for k,v in values.items()))
+          Path('.env').chmod(0o600)
+          PY
+      - name: Deploy API and database
+        run: |
+          set -eu
+          scp app.jar "$TARGET:/opt/coven-gathering/app.jar.next"
+          scp deploy/docker-compose.yml .env "$TARGET:/opt/coven-gathering/"
+          rm .env
+          ssh "$TARGET" 'bash -se' <<'REMOTE'
+          cd /opt/coven-gathering
+          chmod 600 .env
+          if test -f app.jar; then cp app.jar app.jar.previous; fi
+          mv app.jar.next app.jar
+          docker compose up -d --wait --wait-timeout 180 db
+          docker compose up -d --force-recreate --wait --wait-timeout 180 backend
+          REMOTE
+      - name: Deploy React static files
+        if: ${{ vars.FRONTEND_HOST != 'vercel' }}
+        run: rsync -az --delete dist/ "$TARGET:/srv/coven-gathering/"
+      - name: Remove temporary credentials
+        if: always()
+        run: rm -f .env ~/.ssh/id_deploy

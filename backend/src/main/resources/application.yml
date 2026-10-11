@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/coven}
+    username: ${DB_USER:coven}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+app:
+  origins: ${APP_ORIGINS:http://localhost:5173}
+  cookie-secure: ${COOKIE_SECURE:false}
+  proofs-dir: ${PROOFS_DIR:./data/proofs}
+admin:
+  username: ${ADMIN_USER:admin}
+  password: ${ADMIN_PASSWORD}

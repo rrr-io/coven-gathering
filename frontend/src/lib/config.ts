@@ -1,0 +1,191 @@
+export const clans = [
+  {
+    id: "cullen",
+    name: "CULLEN",
+    color: "#c8c9c5",
+    motto: "Together, until the end.",
+    traits: "Loyalty · Connection · Unity",
+    description:
+      "You are the ENGENE who keeps people connected. You naturally look out for others, encourage the fandom, and believe that supporting ENHYPEN is something we do together.",
+  },
+  {
+    id: "volturi",
+    name: "VOLTURI",
+    color: "#b55e6b",
+    motto: "When it matters, we move.",
+    traits: "Determination · Action · Discipline",
+    description:
+      "You are the ENGENE who moves when action is needed. When ENHYPEN needs support, you bring determination, urgency, and the willingness to push through until the very end.",
+  },
+  {
+    id: "denali",
+    name: "DENALI",
+    color: "#93acb9",
+    motto: "Quietly. Steadily. Always.",
+    traits: "Consistency · Patience · Resilience",
+    description:
+      "You are the steady ENGENE. You may not always be the loudest, but you keep showing up, doing your part, and supporting ENHYPEN consistently.",
+  },
+  {
+    id: "egyptian",
+    name: "EGYPTIAN",
+    color: "#baa078",
+    motto: "Every effort, a purpose.",
+    traits: "Strategy · Adaptability · Insight",
+    description:
+      "You are the strategic ENGENE. You observe the situation, adapt when things change, and look for practical ways to make every effort count for ENHYPEN.",
+  },
+];
+export const questions = [
+  {
+    title: "ENHYPEN’S COMEBACK IS HERE.",
+    text: "The fandom is busy and there are many things that need to be done. What do you naturally find yourself doing?",
+    answers: [
+      "Make sure everyone stays together and knows what to prioritize.",
+      "Take initiative and get people moving immediately.",
+      "Focus on consistently doing your part without getting distracted.",
+      "Look at everything happening and figure out the most useful strategy.",
+    ],
+  },
+  {
+    title: "THE VOTING DEADLINE IS GETTING CLOSE.",
+    text: "Resources are limited and ENGENEs need to stay focused. What is your instinct?",
+    answers: [
+      "Coordinate with others so nobody is left behind.",
+      "Push everyone to act before time runs out.",
+      "Stay consistent and keep collecting what is needed.",
+      "Reassess the situation and adjust the strategy.",
+    ],
+  },
+  {
+    title: "AN ENGENE ASKS FOR HELP.",
+    text: "“I’m confused. How do I vote for ENHYPEN?” What would you most likely do?",
+    answers: [
+      "Walk them through it and make sure they feel supported.",
+      "Give them the essential instructions and get them started.",
+      "Explain it patiently and let them work at their own pace.",
+      "Find the clearest guide or information and show them the best route.",
+    ],
+  },
+  {
+    title: "ENGENES ARE SUPPOSED TO BE VOTING.",
+    text: "Instead, people are arguing with another fandom. What do you naturally do?",
+    answers: [
+      "Remind everyone why we’re here and bring the focus back to ENHYPEN.",
+      "Tell people to stop wasting time and get back to voting.",
+      "Ignore the argument and continue supporting ENHYPEN.",
+      "Avoid unnecessary conflict and redirect people toward useful information.",
+    ],
+  },
+  {
+    title: "ONLY A FEW HOURS ARE LEFT.",
+    text: "The fandom is tired. What kind of ENGENE do you become?",
+    answers: [
+      "Encourage everyone and keep the group motivated until the end.",
+      "Push through and make sure the remaining tasks are completed.",
+      "Keep doing your part steadily until voting closes.",
+      "Look for the most effective way to use the remaining time.",
+    ],
+  },
+  {
+    title: "A NEW VOTING PRIORITY APPEARS.",
+    text: "The original plan suddenly needs to change. What is your first instinct?",
+    answers: [
+      "Check with the team so everyone understands the change.",
+      "Switch immediately and start acting.",
+      "Stay calm and continue with what can realistically be done.",
+      "Compare the new situation with the old plan before deciding.",
+    ],
+  },
+  {
+    title: "SUPPORTING ENHYPEN.",
+    text: "What does supporting ENHYPEN mean most to you?",
+    answers: [
+      "Making sure ENGENEs support each other while supporting ENHYPEN.",
+      "Giving everything you can when ENHYPEN needs you.",
+      "Being there consistently, even when nobody is watching.",
+      "Finding effective ways to turn our collective effort into results.",
+    ],
+  },
+  {
+    title: "ONE LAST QUESTION.",
+    text: "ENHYPEN needs ENGENEs to stay united. What do you believe you naturally bring to the fandom?",
+    answers: [
+      "Loyalty and connection.",
+      "Determination and action.",
+      "Steadiness and reliability.",
+      "Strategy and adaptability.",
+    ],
+  },
+];
+export const schedules = [
+  { id: 1, name: "Moonrise", start: "09:00", end: "11:00" },
+  { id: 2, name: "Noon gathering", start: "12:00", end: "14:00" },
+  { id: 3, name: "Twilight", start: "18:00", end: "20:00" },
+  { id: 4, name: "The final hour", start: "22:00", end: "23:00" },
+];
+export const defaultConfig = {
+  general: {
+    title: "THE COVEN GATHERING",
+    subtitle: "Four covens. One fandom. Every effort matters.",
+  },
+  clans,
+  quiz: { version: 1, title: "WHAT KIND OF ENGENE ARE YOU?", enabled: true },
+  questions,
+  scoring: questions.map(() =>
+    [0, 1, 2, 3].map((i) => [0, 1, 2, 3].map((j) => (i === j ? 1 : 0))),
+  ),
+  schedules,
+  countries: {},
+  regions: {
+    SEA: "Southeast Asia",
+    "EAST ASIA": "East Asia",
+    "SOUTH ASIA": "South Asia",
+    "WEST ASIA": "West Asia",
+    "CENTRAL ASIA": "Central Asia",
+    EUROPE: "Europe",
+    AFRICA: "Africa",
+    "NORTH AMERICA": "North America",
+    LATAM: "Latin America",
+    CARIBBEAN: "Caribbean",
+    OCEANIA: "Oceania",
+    ANTARCTIC: "Antarctic",
+  },
+  guide: {
+    platform: "",
+    period: "",
+    eligibility: "",
+    limits: "",
+    instructions: "",
+    rules: "",
+    sources: [],
+  },
+  content: {
+    hero: "The night brings us together.",
+    intro:
+      "An ENGENE fan-made participation race for ENHYPEN. Find your coven, show up together, and make every day count.",
+  },
+  banners: { enabled: false, text: "" },
+  admin: {
+    reviewNote: "Review proofs before the race day closes at 00:00 KST.",
+  },
+};
+export type Config = typeof defaultConfig;
+export const rules = [
+  "Select your country.",
+  "Complete the ENGENE × ENHYPEN sorting quiz.",
+  "Accept your assigned clan.",
+  "Your clan remains locked across race days.",
+  "One valid check-in per participant, per schedule.",
+  "Only verified proofs count.",
+  "Duplicate proofs do not count.",
+  "Rankings use participation percentage.",
+  "Schedule denominators are captured at schedule start; new members join the next window.",
+  "The daily race resets at 00:00 KST.",
+  "Previous results are archived and never recalculated.",
+  "Country and region data are aggregated.",
+  "Individual identities and proofs remain private.",
+  "The Coven Race is a fan-made project.",
+  "Official MAMA rules always take priority.",
+  "Do not harass or target other fandoms.",
+];

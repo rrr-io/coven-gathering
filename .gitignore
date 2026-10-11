@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+**/node_modules/
+**/dist/
+**/target/
+**/data/
+*.log
+*.jar
+.idea/
+.vscode/
+.DS_Store

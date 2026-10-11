@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:h2:mem:coven;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
+    driver-class-name: ${TEST_DB_DRIVER:org.h2.Driver}
+    username: ${TEST_DB_USER:sa}
+    password: ${TEST_DB_PASSWORD:test}
+app:
+  origins: http://localhost:5173
+  cookie-secure: false
+  proofs-dir: ${java.io.tmpdir}/coven-java-tests
+admin:
+  username: admin
+  password: integration-tests-only-password
+RACE_TICK_MS: 3600000

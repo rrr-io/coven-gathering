@@ -1,0 +1,23 @@
+# Add ONLY this block to your existing Caddyfile. Replace the hostname.
+# Caddy must be connected to the existing Docker network "web".
+# Inside Caddy, /srv/coven-gathering must map to /srv/coven-gathering on the host.
+coven.example.com {
+    encode zstd gzip
+    request_body {
+        max_size 6MB
+    }
+    handle /api/* {
+        reverse_proxy coven-backend:8080
+    }
+    handle {
+        root * /srv/coven-gathering
+        try_files {path} /index.html
+        header /index.html Cache-Control "no-cache"
+        file_server
+    }
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+}

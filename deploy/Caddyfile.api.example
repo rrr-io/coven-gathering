@@ -1,0 +1,14 @@
+# Alternative: React on Vercel, Spring Boot on Oracle. Use a real API hostname.
+api-coven.example.com {
+    encode zstd gzip
+    request_body {
+        max_size 6MB
+    }
+    handle /api/* {
+        reverse_proxy coven-backend:8080
+    }
+    handle {
+        respond "Not found" 404
+    }
+    header X-Content-Type-Options nosniff
+}
