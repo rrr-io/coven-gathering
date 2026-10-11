@@ -176,7 +176,7 @@ class AcceptanceTest {
     postJson(member, Map.of("action", "review", "id", proof, "status", "VERIFIED"), 400, true);
     s = state(member);
     assertEquals(100, s.path("stats").path("percentage").asDouble());
-    var c = s.path("stats").path("schedules").get(0).path("clans").get(0);
+    var c = s.path("stats").path("schedules").get(1).path("clans").get(0);
     assertEquals(100, c.path("percentage").asDouble());
     assertTrue(c.path("hasEligible").asBoolean());
     for (int i = 1; i < 4; i++)
@@ -196,12 +196,12 @@ class AcceptanceTest {
         state(member)
             .path("stats")
             .path("schedules")
-            .get(0)
+            .get(1)
             .path("clans")
             .get(1)
             .path("percentage")
             .asInt());
-    clock.at("2026-10-11T12:00:00+09:00");
+    clock.at("2026-10-11T18:30:00+09:00");
     mvc.perform(
             multipart("/api/coven")
                 .file(new MockMultipartFile("file", "proof.png", "image/png", png))
@@ -229,17 +229,17 @@ class AcceptanceTest {
         .andExpect(jsonPath("$.status").value("VERIFIED"));
     // Config change must not rewrite the already frozen daily schedule.
     var updated = config.current();
-    ((ObjectNode) updated.path("schedules").get(0)).put("start", "08:30");
+    ((ObjectNode) updated.path("schedules").get(1)).put("start", "08:30");
     postJson(member, Map.of("action", "config", "config", updated), 200, true);
-    assertEquals("09:00", state(member).path("schedules").get(0).path("start").asText());
+    assertEquals("09:00", state(member).path("schedules").get(1).path("start").asText());
     clock.at("2026-10-12T00:00:00+09:00");
     s = state(member);
     assertEquals("2026-10-12", s.path("day").asText());
     assertTrue(s.path("stats").path("hasParticipants").asBoolean());
     assertEquals(0, s.path("stats").path("percentage").asDouble());
     assertEquals(0, s.path("myProofs").size());
-    assertEquals("08:30", s.path("schedules").get(0).path("start").asText());
-    assertEquals(200.0 / 7, s.path("history").get(0).path("percentage").asDouble(), 0.001);
+    assertEquals("08:30", s.path("schedules").get(1).path("start").asText());
+    assertEquals(200.0 / 5, s.path("history").get(0).path("percentage").asDouble(), 0.001);
     var history = s.path("history").deepCopy();
     postJson(member, Map.of("action", "review", "id", proof, "status", "REJECTED"), 400, true);
     Cookie fresh = session();

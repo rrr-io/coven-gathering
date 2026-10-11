@@ -337,15 +337,15 @@
   "schedules": [
     {
       "id": 1,
-      "name": "Moonrise",
-      "start": "09:00",
-      "end": "11:00"
+      "name": "Nocturne",
+      "start": "00:00",
+      "end": "02:00"
     },
     {
       "id": 2,
-      "name": "Nocturne",
-      "start": "24:00",
-      "end": "02:00"
+      "name": "Moonrise",
+      "start": "09:00",
+      "end": "11:00"
     },
     {
       "id": 3,
