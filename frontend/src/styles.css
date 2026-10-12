@@ -962,6 +962,14 @@ footer {
   max-width: 1260px;
   margin: auto;
 }
+.footer-alliance {
+  text-align: center;
+  margin: 0;
+  padding: 24px 16px 0;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: #c9cfc4;
+}
 .footer-top {
   display: flex;
   justify-content: space-between;

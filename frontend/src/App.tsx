@@ -1450,6 +1450,9 @@ export default function Page() {
         )}
       </main>
       <footer>
+        <p className="footer-alliance">
+          ENHYPEN VOTING ALLIANCE &amp; ENCODE GLOBAL
+        </p>
         <div className="footer-top">
           <a className="brand" href="#home" onClick={() => go("home")}>
             <Moon size={22} strokeWidth={1} />
