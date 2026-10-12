@@ -2307,6 +2307,12 @@ dialog::backdrop {
     font-size: 8px;
     padding: 13px 17px;
   }
+  .footer-alliance {
+    white-space: nowrap;
+    padding-inline: 0;
+    font-size: min(11px, 2.3vw);
+    letter-spacing: 0.15em;
+  }
   .footer-top {
     padding: 24px 0;
     flex-wrap: wrap;
